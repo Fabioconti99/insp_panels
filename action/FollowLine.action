@@ -1,0 +1,12 @@
+#goal definition
+float32 x
+float32 y 
+int16 mod  
+---
+#result definition
+int16 arrived
+---
+#feedback: actual position
+float32 x
+float32 y
+float32 z
