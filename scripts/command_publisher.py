@@ -9,7 +9,7 @@ import os
 # ROS
 import rospy 
 from geometry_msgs.msg import Point
-from my_custom_interfaces.msg import Drone_cmd
+from insp_panels_pkg.msg import *
 
 
 class send_cmd_socket():

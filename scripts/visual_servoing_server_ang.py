@@ -7,13 +7,13 @@ roslib.load_manifest('insp_panels_pkg')
 import rospy
 import actionlib
 
-from insp_rail_pkg.msg import *
+from insp_panels_pkg.msg import *
 
 from   std_msgs.msg       import Float32,Int16
 from   geometry_msgs.msg  import Pose
 from   tf.transformations import euler_from_quaternion, quaternion_from_euler
 
-from my_custom_interfaces.msg import Drone_cmd
+#from insp_rail_pkg.msg import Drone_cmd
 
 
 # pubblico comando in velocita con custom message sul topic coomand
@@ -53,8 +53,9 @@ class FollowLineServer:
         self.theta_s =float(math.radians(90))
 
         self.P_z=float(0.5)
-        self.lam = float(0.001)
-
+        self.lam = np.array([[0.01,0,0,0],[0,1,0,0],[0,0,0.01,0],[0,0,0,0.005]])
+        #self.lam = np.array([[0.01,0,0,0],[1,1,1,1],[0.01,0.01,0.01,0.01],[0.005,0.005,0.005,0.005]])
+        #self.lam = 0.01
         self.x_current = float(0)
         self.y_prec = float(0)
         self.y_current = float(0)
@@ -94,26 +95,45 @@ class FollowLineServer:
     def callback_loc(self, pose):
         global x_line,y_line
 
-        if pose.orientation.z > 0:
-            self.theta = -math.radians(90-abs(pose.orientation.z))
-
-        elif pose.orientation.z < 0: 
-            self.theta = math.radians(90-abs(pose.orientation.z))
-        else:
-            self.theta = math.radians(90)
-
-        self.rail_detected = pose.orientation.w
-
-        if(self.theta==0):
+        if(math.radians(pose.orientation.z)==0):
             x_line=0
-            y_line=pose.position.y
+            y_line=(pose.position.y)
 
         else:
-            m=math.tan(-math.pi/2-self.theta)
+            m=math.tan(math.radians(pose.orientation.z))
             x_line=m*(m*pose.position.x-pose.position.y)/(1+m*m)
             y_line=-(m*pose.position.x-pose.position.y)/(1+m*m)
 
-        self.rho = math.sqrt((x_line*x_line)+(y_line*y_line))
+        if pose.orientation.z > 0:
+
+            if x_line < 0:
+                self.theta = math.pi-math.radians(90-abs(pose.orientation.z))
+
+            else :
+                self.theta = math.radians(90-abs(pose.orientation.z))
+
+        elif pose.orientation.z < 0:
+
+            if x_line >= 0:
+                self.theta = math.radians(90-abs(pose.orientation.z))
+
+            else:
+                self.theta = math.pi-math.radians(90-abs(pose.orientation.z))
+        else:
+
+            if y_line > 0:
+                self.theta = math.radians(90)
+
+            else:
+                self.theta = -math.radians(90)
+
+        if y_line < 0:    
+            self.rho = -math.sqrt((x_line*x_line)+(y_line*y_line))
+        else:    
+            self.rho = math.sqrt((x_line*x_line)+(y_line*y_line))
+
+
+        self.rail_detected = pose.orientation.w
 
     def callback_ground(self, distance):
 
@@ -128,6 +148,7 @@ class FollowLineServer:
 
         delta = .3
 
+        #c_R_b = np.array([[0,-1,0],[1,0,0],[0,0,1]])
         c_R_b = np.array([[0,-1,0],[math.cos(math.radians(30)),0,math.sin(math.radians(30))],[-math.sin(math.radians(30)),0,math.cos(math.radians(30))]])
         
         c_t_b = np.array([[0,0.01,0],[-0.01,0,-0.1],[0,0.1,0]])
@@ -168,13 +189,15 @@ class FollowLineServer:
 
         #s_star = np.array([[self.rho_s],[self.z_s],[self.theta_s]])
 
-        s_star = np.array([[self.rho_s],[self.theta_s],[self.z_s],[self.v_y_s]])
+        
 
         while not rospy.is_shutdown():
 
+
+
             self.x_s = goal.x
             self.y_s = goal.y
-
+            
             self.v_y = (self.y_current-self.y_prec)/(1/20)
             self.y_prec = self.y_current
 
@@ -212,13 +235,13 @@ class FollowLineServer:
 
             elif goal.mod == 1:
 
-                self.v_y_s = 200
+                self.v_y_s = .2
 
                 self.flag = 0
 
             elif goal.mod == 2:
 
-                self.v_y_s = -200
+                self.v_y_s = -.2
 
                 self.flag = 0
 
@@ -230,10 +253,12 @@ class FollowLineServer:
             #s = np.array([[self.rho],[self.theta],[0]])
             #s = np.array([[self.rho],[self.theta]])
             #s = np.array([[self.rho],[self.z],[self.theta]])
+
             s_star = np.array([[self.rho_s],[self.theta_s],[self.z_s],[self.v_y_s]])
             s = np.array([[self.rho],[self.theta],[self.z],[self.v_y]])
-
-            self.U = -self.lam * J_s_pseudo @ (s-s_star)
+            #lam_J= -np.multiply(self.lam, J_s_pseudo)
+            lam_J= - self.lam @ J_s_pseudo
+            self.U =lam_J @ (s-s_star)
 
             if y_line<0:
                 self.cmd.roll = -abs(self.U[0,0])    # movimento sulle x
@@ -296,6 +321,7 @@ class FollowLineServer:
             print("z       :",self.z)
             print("theta   :",self.theta)
             print("v_y     :",self.v_y)
+            print("rho     :",self.rho)
 
             self._feedback.x = self.x_current
             self._feedback.y = self.y_current

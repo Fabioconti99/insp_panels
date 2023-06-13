@@ -7,7 +7,7 @@ import time
 import os
 # ROS
 import rospy 
-from my_custom_interfaces.msg import Drone_cmd
+from insp_panels_pkg.msg import *
 
 yaw=0
 pitch=0

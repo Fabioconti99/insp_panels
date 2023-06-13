@@ -5,13 +5,12 @@ roslib.load_manifest('insp_panels_pkg')
 import rospy
 import actionlib
 
-from insp_rail_pkg.msg import *
+from insp_panels_pkg.msg import *
 
 from   std_msgs.msg       import Float32
 from   geometry_msgs.msg  import Pose
 from   tf.transformations import euler_from_quaternion, quaternion_from_euler
 
-from my_custom_interfaces.msg import Drone_cmd
 
 
 P_gain_yaw=0.2

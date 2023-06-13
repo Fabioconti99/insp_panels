@@ -5,7 +5,7 @@ import rospy
 import roslib
 
 from geometry_msgs.msg import Pose 
-from my_custom_interfaces.msg import Drone_cmd
+from insp_panels_pkg.msg import *
 from std_msgs.msg import Float32
 
 def main():

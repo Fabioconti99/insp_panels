@@ -7,13 +7,11 @@ roslib.load_manifest('insp_panels_pkg')
 import rospy
 import actionlib
 
-from insp_rail_pkg.msg import *
+from insp_panels_pkg.msg import *
 
 from   std_msgs.msg       import Float32,Int16
 from   geometry_msgs.msg  import Pose
 from   tf.transformations import euler_from_quaternion, quaternion_from_euler
-
-from my_custom_interfaces.msg import Drone_cmd
 
 
 # pubblico comando in velocita con custom message sul topic coomand
@@ -158,7 +156,7 @@ class FollowLineServer:
         A = 0
         B = 0
         C = 1
-        D = -1
+        D = -10
         l_rho = float((A*self.rho*math.cos(self.theta)+B*self.rho*math.sin(self.theta)+C)/D)
         l_theta = float((A*math.sin(self.theta)-B*math.cos(self.theta))/D)
 
@@ -236,10 +234,10 @@ class FollowLineServer:
             self.U = -self.lam * J_s_pseudo @ (s-s_star)
 
             if y_line<0:
-                self.cmd.roll = -abs(self.U[0,0])    # movimento sulle x
+                self.cmd.roll = -abs(self.U[0,0])*0.01    # movimento sulle x
 
             if y_line>0:
-                self.cmd.roll = abs(self.U[0,0])    # movimento sulle x
+                self.cmd.roll = abs(self.U[0,0])*0.01    # movimento sulle x
 
             
             #self.cmd.roll = self.U[0,0]

@@ -6,13 +6,12 @@ roslib.load_manifest('insp_panels_pkg')
 import rospy
 import actionlib
 
-from insp_rail_pkg.msg import *
+from insp_panels_pkg.msg import *
 
 from   std_msgs.msg       import Float32,Int16
 from   geometry_msgs.msg  import Pose
 from   tf.transformations import euler_from_quaternion, quaternion_from_euler
 
-from my_custom_interfaces.msg import Drone_cmd
 
 
 # pubblico comando in velocita con custom message sul topic coomand
@@ -153,7 +152,7 @@ class FollowLineServer:
                 else:
                     self.cmd.roll  = -(-V_x*math.cos(rad_angle))
 
-                self.cmd.yaw= -10*(rad_angle)
+                self.cmd.yaw= 10*(rad_angle)
                 self.cmd.throttle = P_gain_throttle*(altitude - self.ground_distance)
 
                 self.flag = 0
@@ -167,7 +166,7 @@ class FollowLineServer:
                 else:
                     self.cmd.roll  = -(-V_x*math.cos(rad_angle))
 
-                self.cmd.yaw= -10*(rad_angle)
+                self.cmd.yaw= 10*(rad_angle)
                 self.cmd.throttle =P_gain_throttle*(altitude - self.ground_distance)
 
                 self.flag = 0
@@ -216,12 +215,9 @@ class FollowLineServer:
             print("pitch: ",self.cmd.pitch)
             print("roll: ", self.cmd.roll)
             print("throttle: ", self.cmd.throttle)
-            print("y_line: ",y_line)
-            print("mod: ",goal.mod)
             print("---")
-            print("x:",self.x_current)
-            print("y:",self.y_current)
-            print("z:",self.ground_distance)
+            print("y_line:",y_line)
+            print("z     :",self.ground_distance)
 
             self._feedback.x = self.x_current
             self._feedback.y = self.y_current

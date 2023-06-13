@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 # IMPORTS
-import math
 import rospy
 import roslib
 
 from geometry_msgs.msg import Pose 
 from my_custom_interfaces.msg import Drone_cmd
 from std_msgs.msg import Float32
+import math
 
 import argparse
 import os
@@ -35,16 +35,16 @@ old_angle=float(0)
 old_ground_distance=float(0)
 
 P_gain_yaw=0.2
-D_gain_yaw=0#0.5
-I_gain_yaw=0#0.0001
+D_gain_yaw=0
+I_gain_yaw=0
 
 P_gain_throttle=0.1
-D_gain_throttle=0#0.1
-I_gain_throttle=0#0.0001
+D_gain_throttle=0
+I_gain_throttle=0
 
-P_gain_pitch=0.002
-D_gain_pitch=0#0.002
-I_gain_pitch=0#0.00001
+P_gain_pitch=0.001
+D_gain_pitch=0
+I_gain_pitch=0
 
 yaw_integral=0
 throttle_integral=0
@@ -65,7 +65,6 @@ def update_integrals(yaw_e, throttle_e,pitch_e):
     yaw_integral=yaw_integral+yaw_e
     throttle_integral=throttle_integral+throttle_e
     pitch_integral=pitch_integral+pitch_e
-
 
 # SUBSCRIBERs CALLBACK
 def callback_loc(pose):
@@ -98,45 +97,52 @@ def callback_loc(pose):
 
     x_perp=x_perp/im_width
 
-
 def callback_ground(distance):
     global ground_distance
     ground_distance=distance.data
 
 def main():
-    rospy.init_node('lyapunov_drone_controller', anonymous=False)
+    rospy.init_node('drone_controller', anonymous=False)
     rospy.Subscriber("localization", Pose, callback_loc,queue_size=1)
-    #rospy.Subscriber("ground_distance", Float32, callback_ground,queue_size=1)       #ground_distance or barometer_altitude no both
-    rospy.Subscriber("barometer_altitude", Float32, callback_ground,queue_size=1)
-
+    rospy.Subscriber("ground_distance", Float32, callback_ground,queue_size=1)
     command_pub=rospy.Publisher("command", Drone_cmd, queue_size=1) #maybe is better to use cmd_vel
 
     cmd=Drone_cmd()
     rate = rospy.Rate(20) # 20hz 
-    print("Non-linear controller started!")
+    print("PID controller started!")
 
     while not rospy.is_shutdown():
-        
-        V_x=2             # NOTA IMPORTANTE: Puoi scegliere qualsiasi V_x
-        V_y=1*x_perp
 
-        cmd.roll=V_x*math.cos(rad_angle)+V_y*math.sin(rad_angle)
-        cmd.pitch=-V_x*math.sin(rad_angle)+V_y*math.cos(rad_angle)
-        cmd.yaw= -0.1*angle
+        cmd.yaw = -P_gain_yaw*angle - D_gain_yaw*(angle-old_angle) -I_gain_yaw*yaw_integral # signs may be due to the inverted image of the simulation
+        if(abs(cmd.yaw)>30): # MAX yaw DJI= 100 degree/s 
+            cmd.yaw=30*(abs(cmd.yaw)/cmd.yaw)
+
         cmd.throttle = P_gain_throttle*(altitude - ground_distance) + D_gain_throttle*(ground_distance-old_ground_distance) + I_gain_throttle*throttle_integral
-        
         if(abs(cmd.throttle)>4): # MAX throttle DJI= 4m/s
             cmd.throttle=4*(abs(cmd.throttle)/cmd.throttle)
 
-        if(abs(cmd.yaw)>30): # MAX yaw DJI= 100 degree/s 
-            cmd.yaw=30*(abs(cmd.yaw)/cmd.yaw)
-        
-        if(abs(cmd.roll)>5): # MAX roll/pitch DJI= 15m/s 
-            cmd.roll=5*(abs(cmd.roll)/cmd.roll)
-
+        cmd.pitch =    P_gain_pitch*x + D_gain_pitch*(x-old_x) + I_gain_pitch*pitch_integral
         if(abs(cmd.pitch)>5): # MAX roll/pitch DJI= 15m/s 
             cmd.pitch=5*(abs(cmd.pitch)/cmd.pitch)
-        
+
+        #print("P part: ", -P_gain_yaw*angle,", D part: ",- D_gain_yaw*(angle-old_angle)) 
+        update_olds()
+        update_integrals(angle,(altitude-ground_distance),x)
+
+        # speed management1
+        #if(abs(x)<10 and abs(angle<5)):
+        #    cmd.roll=1
+        #elif(abs(x)<100 and abs(angle<20)):
+        #    cmd.roll=0.5
+        #else:
+        #    cmd.roll=0
+
+        # speed management2
+        cmd.roll=max(1-abs(x)/100,0)+max(1-abs(angle)/20,0) # MAX =2+2=4  best for now 
+
+        # speed management3
+        #cmd.roll=max(2-abs(x)/50,0)*max(2-abs(angle)/10,0) # MAX =2*2=4          
+
         if(rail_detected==42): # It means rails not detected, so keep the drone still
             cmd.yaw = 0
             cmd.pitch = 0
@@ -152,8 +158,7 @@ def main():
         #print("roll: ", cmd.roll)
         #print("throttle: ", cmd.throttle)
         #print("x_perp: ",x_perp)
-
-        #----------------------CONTROL ERROR FILE-----------------------------------------
+         #----------------------CONTROL ERROR FILE-----------------------------------------
         file_txt=open(os.path.join(ROOT,"control_errors"), "a")
         text=("control errors and commands: \nAngle:\n" + str(angle) + "\nPerpendicular_distance:\n" + str(x_perp) + "\nAltitude\n" + str(ground_distance) + "\nYaw:\n" + str(cmd.yaw) + "\nPitch:\n" + str(cmd.pitch) + "\nRoll:\n" + str(cmd.roll) + "\nThrottle:\n" + str(cmd.throttle) +"\n\n")
         file_txt.write(text)

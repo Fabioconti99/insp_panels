@@ -7,23 +7,22 @@ roslib.load_manifest('insp_panels_pkg')
 import rospy
 import actionlib
 
-from insp_rail_pkg.msg import *
+from insp_panels_pkg.msg import *
 
 from   std_msgs.msg       import Float32,Int16
 from   geometry_msgs.msg  import Pose
 from   tf.transformations import euler_from_quaternion, quaternion_from_euler
 
-from my_custom_interfaces.msg import Drone_cmd
 
 
 # Brings in the messages used by the fibonacci action, including the
 # goal message and the result message.
 client_1 = actionlib.SimpleActionClient('follow_line', FollowLineAction)
 client_2 = actionlib.SimpleActionClient('go_to_goal', GoPoseAction)
-wp = np.array([[-18,22],[-20,22],[-20,18.5],[20,18.5],[20,15],[-20,15],[-20,10],[20,10],[20,6.5],[-20,6.5],[-20,3],[20,3],[20,-2.5],[2.5,-2.5],[-2.5,-2.5],[-20,-2.5],[-20,-6],[-2.5,-6],[2.5,-6],[20,-6],[20,-9.5],[2.5,-9.5],[-2.5,-9.5],[-20,-9.5],[-20,-15],[-2.5,-15],[2.5,-15],[20,-15],[20,-18.5],[2.5,-18.5],[-2.5,-18.5],[-20,-18.5],[-20,-22],[-2.5,-22],[2.5,-22],[20,-22]])
+wp = np.array([[18,22],[-20,22],[-20,18.5],[20,18.5],[20,15],[-20,15],[-20,10],[20,10],[20,6.5],[-20,6.5],[-20,3],[20,3],[20,-2.5],[2.5,-2.5],[-2.5,-2.5],[-20,-2.5],[-20,-6],[-2.5,-6],[2.5,-6],[20,-6],[20,-9.5],[2.5,-9.5],[-2.5,-9.5],[-20,-9.5],[-20,-15],[-2.5,-15],[2.5,-15],[20,-15],[20,-18.5],[2.5,-18.5],[-2.5,-18.5],[-20,-18.5],[-20,-22],[-2.5,-22],[2.5,-22],[20,-22]])
 #wp = np.array([[20,-2.5],[2.5,-2.5],[-2.5,-2.5],[-20,-2.5],[-20,-6],[-2.5,-6],[2.5,-6],[20,-6],[20,-9.5],[2.5,-9.5],[-2.5,-9.5],[-20,-9.5],[-20,-15],[-2.5,-15],[2.5,-15],[20,-15],[20,-18.5],[2.5,-18.5],[-2.5,-18.5],[-20,-18.5],[-20,-22],[-2.5,-22],[2.5,-22],[20,-22]])
 
-wp[:,1]-= (7-(0.225+(1.5/2)*math.sin(math.radians(30))))*math.tan(math.radians(30))
+#wp[:,1]-= (7-(0.225+(1.5/2)*math.sin(math.radians(30))))*math.tan(math.radians(30))
 
 stop_ = 0
 def cancel_callback(data1): 
