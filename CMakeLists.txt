@@ -51,23 +51,23 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
- catkin_install_python(PROGRAMS
-   scripts/img_listener_UDP.py
-   scripts/UDP_server.py
-   scripts/command_publisher.py
-   scripts/cmd_vel_publisher.py
-   scripts/detectron2_ros.py
-   scripts/frames2video.py
-   scripts/pc_drone_controller.py
-   scripts/drone_controller_simulation.py
-   scripts/PID_drone_controller.py
-   scripts/Lyapunov_drone_controller.py
-   scripts/odometry_lyap.py
-   scripts/line_detection.py
-   scripts/real_errors.py
+ #catkin_install_python(PROGRAMS
+ #  scripts/img_listener_UDP.py
+ #  scripts/UDP_server.py
+ #  scripts/command_publisher.py
+ #  scripts/cmd_vel_publisher.py
+ #  scripts/detectron2_ros.py
+ #  scripts/frames2video.py
+ #  scripts/pc_drone_controller.py
+ #  scripts/drone_controller_simulation.py
+ #  scripts/PID_drone_controller.py
+ #  scripts/Lyapunov_drone_controller.py
+ #  scripts/odometry_lyap.py
+ #  scripts/line_detection.py
+ #  scripts/real_errors.py
    
-   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
- )
+ #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+ #)
 
 
 

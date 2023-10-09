@@ -6,13 +6,11 @@ import numpy as np
 # Brings in the SimpleActionClient
 import actionlib
 
-from insp_rail_pkg.msg import *
+from insp_panels_pkg.msg import *
 
-from   std_msgs.msg       import Float64,Int16
-from   geometry_msgs.msg  import Pose
+from   std_msgs.msg       import Int16
 from   tf.transformations import euler_from_quaternion, quaternion_from_euler
 
-from my_custom_interfaces.msg import Drone_cmd
 
 
 # Brings in the messages used by the fibonacci action, including the
@@ -32,6 +30,7 @@ def pose_client():
 
     #wp = np.array([[19.525,20.625],[9.525,20.6],[-11.05,15.375],[-19.550,15.375],[-19.975,0.350],[-10.975,0.350],[9.6,5.6],[19.1,5.6],[16.775,-9.575],[9.275,-9.575],[-11.1,-14.725],[-22.3,-14.825]])
     wp = np.array([[20,22],[-20,22],[-20,18.5],[20,18.5],[20,15],[-20,15],[-20,10],[20,10],[20,6.5],[-20,6.5],[-20,3],[20,3],[20,-2.5],[-20,-2.5],[-20,-6],[20,-6],[20,-9.5],[-20,-9.5],[-20,-15],[20,-15],[20,-18.5],[-20,-18.5],[-20,-22],[20,-22]])
+    #wp = np.array([[0.7,-2.4]])
 
     print("pose_client")
     # Creates the SimpleActionClient, passing the type of the action
@@ -45,26 +44,23 @@ def pose_client():
     goal = GoPoseGoal()
 
     i = 0
-    rate = 20000
-    ra = rospy.Rate(rate)
+
+    rate = rospy.Rate(15) # 15hz
     while not rospy.is_shutdown():
 
         try:
-            ra.sleep()
+            rate.sleep()
 
             print("x_goal: ",wp[i,0])
             print("y_goal: ",wp[i,1])
-            print("z_goal: ",5.0)
+            print("z_goal: ",1.7)
+            print("i: ",i)
 
-            x_goal = wp[i,0]
+            z_goal = 7
 
-            y_goal = wp[i,1]
-
-            z_goal = 7.0
-
-            goal.x = float(x_goal)
-            goal.y = float(y_goal)
-            goal.z = float(z_goal)
+            goal.x = wp[i,0]
+            goal.y = wp[i,1]
+            goal.z = z_goal
 
             # Sends the goal to the action server.
             client.send_goal(goal)

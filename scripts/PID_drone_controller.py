@@ -4,17 +4,13 @@ import math
 import roslib
 roslib.load_manifest('insp_panels_pkg')
 import rospy
-import actionlib
 import os
 import sys
 
-import argparse
-
 from insp_panels_pkg.msg import *
 
-from   std_msgs.msg       import Float32,Int16
+from   std_msgs.msg       import Float32
 from   geometry_msgs.msg  import Pose
-from   tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 
 import csv
@@ -46,7 +42,7 @@ P_gain_yaw=float(0.06)
 D_gain_yaw=float(0)#float(0.002)
 I_gain_yaw=float(0)#float(0.002)
 
-P_gain_throttle=float(0.01)
+P_gain_throttle=float(0.5)
 D_gain_throttle=float(0)#float(0.001)
 I_gain_throttle=float(0)#float(0.001)
 
@@ -62,7 +58,7 @@ yaw_integral = float(0)
 throttle_integral = float(0)
 roll_integral = float(0)
 
-altitude= float (1.8) # meters
+altitude= float (7) # meters
 
 y_perp = float (0)
 im_width = float (10000)
@@ -138,21 +134,32 @@ def main():
     rate = rospy.Rate(20) # 20hz 
     print("PID controller started!")
 
+    time_flag = 0
     while not rospy.is_shutdown():
 
+        if time_flag == 0:
+            exit_time = time.time()+1
         if x >= (im_width/4):
-            cmd.yaw = 0
-            cmd.pitch = 0
-            cmd.roll = 0
-            cmd.throttle = 0
+            time_flag=1
 
-            print("OUT OUT OUT OUT OUT OUT ")
-            command_pub.publish(cmd)
-            break
+            if time.time()<exit_time:
+                command_pub.publish(cmd)
+                print("here")
+            else:
+                cmd.yaw = 0
+                cmd.pitch = 0
+                cmd.roll = 0
+                cmd.throttle = 0
 
-        cmd.yaw = -(+P_gain_yaw*angle + D_gain_yaw*yaw_derivative +I_gain_yaw*yaw_integral) # signs may be due to the inverted image of the simulation
+                print("OUT OUT OUT OUT OUT OUT ")
+                command_pub.publish(cmd)
+                break
+        else:
+            time_flag=0
+
+        cmd.yaw = (+P_gain_yaw*angle + D_gain_yaw*yaw_derivative +I_gain_yaw*yaw_integral) # signs may be due to the inverted image of the simulation
         if(abs(cmd.yaw)>30): # MAX yaw DJI= 100 degree/s 
-            cmd.yaw=-30*(abs(cmd.yaw)/cmd.yaw)
+            cmd.yaw = 30*(abs(cmd.yaw)/cmd.yaw)
 
         cmd.throttle = P_gain_throttle*(altitude - ground_distance) + D_gain_throttle*throttle_derivative + I_gain_throttle*throttle_integral
         if(abs(cmd.throttle)>4): # MAX throttle DJI= 4m/s
@@ -176,7 +183,7 @@ def main():
         #    cmd.roll=0
 
         # speed management2
-        cmd.pitch=-((max(1-abs(y)/100,0)+max(1-abs(angle)/20,0))/10) # MAX =2+2=4  best for now 
+        cmd.pitch= ((max(1-abs(y)/100,0)+max(1-abs(angle)/20,0))/10) # MAX =2+2=4  best for now 
 
         # speed management3
         #cmd.roll=max(2-abs(x)/50,0)*max(2-abs(angle)/10,0) # MAX =2*2=4          

@@ -253,7 +253,7 @@ def main():
 
     else:
         cfg.MODEL.ROI_HEADS.NUM_CLASSES=2
-        cfg.MODEL.WEIGHTS = os.path.join(ROOT,"detectron2_weights",args.weights[0])
+        cfg.MODEL.WEIGHTS = os.path.join(ROOT,"../detectron2_weights",args.weights[0])
         my_metadata = Metadata()
         my_metadata.set(thing_classes = ['solar-panel'])
         #print(my_metadata)
@@ -329,7 +329,10 @@ def main():
             loc.orientation.y=im_height
             loc.orientation.z=-angle
             pub_loc.publish(loc)
-            with open('data_vis.csv', 'a', newline='') as file:
+
+
+            with open('data_vis_nonlin.csv', 'a', newline='') as file:
+            #with open('data_vis_vis_servo.csv', 'a', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow([center[0], -center[1], -angle, time.time()])
 

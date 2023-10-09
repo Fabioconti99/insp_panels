@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-import math
+import math,time
 import roslib
 import numpy as np
 roslib.load_manifest('insp_panels_pkg')
@@ -21,6 +21,7 @@ pub_cmd_vel=rospy.Publisher("/command", Drone_cmd, queue_size=1) #maybe is bette
 
 x_line = 0
 y_line = 0 
+im_width = float(100000)
 
 
 class FollowLineServer:
@@ -93,7 +94,8 @@ class FollowLineServer:
         r, p, self.yaw = euler_from_quaternion(orientation_list)
 
     def callback_loc(self, pose):
-        global x_line,y_line
+        global x_line,y_line,im_width
+        im_width=pose.orientation.x
 
         if(math.radians(pose.orientation.z)==0):
             x_line=0
@@ -191,8 +193,51 @@ class FollowLineServer:
 
         
 
+        time_flag = 0
         while not rospy.is_shutdown():
 
+            if goal.mod == 1:
+                if time_flag == 0:
+                    exit_time = time.time()+0.1
+                if x_line >= (im_width/4):
+                    time_flag=1
+
+                    if time.time()<exit_time:
+                        pub_cmd_vel.publish(self.cmd)
+                        print("here")
+                    else:
+                        self.cmd.yaw = 0
+                        self.cmd.pitch = 0
+                        self.cmd.roll = 0
+                        self.cmd.throttle = 0
+
+                        print("OUT OUT OUT OUT OUT OUT ")
+                        pub_cmd_vel.publish(self.cmd)
+                        break
+                else:
+                    time_flag=0
+            
+            else:
+                if time_flag == 0:
+                    exit_time = time.time()+0.1
+
+                if x_line <= (-im_width/4):
+                    time_flag=1
+
+                    if time.time()<exit_time:
+                        pub_cmd_vel.publish(self.cmd)
+                        print("here")
+                    else:
+                        self.cmd.yaw = 0
+                        self.cmd.pitch = 0
+                        self.cmd.roll = 0
+                        self.cmd.throttle = 0
+
+                        print("OUT OUT OUT OUT OUT OUT ")
+                        pub_cmd_vel.publish(self.cmd)
+                        break
+                else:
+                    time_flag=0
 
 
             self.x_s = goal.x
@@ -235,13 +280,13 @@ class FollowLineServer:
 
             elif goal.mod == 1:
 
-                self.v_y_s = .2
+                self.v_y_s = 1
 
                 self.flag = 0
 
             elif goal.mod == 2:
 
-                self.v_y_s = -.2
+                self.v_y_s = -1
 
                 self.flag = 0
 
@@ -339,13 +384,9 @@ class FollowLineServer:
 
         pub_cmd_vel.publish(self.cmd)
 
-        if self.x_current < (self.x_s+delta) and self.x_current > (self.x_s-delta) and self.y_current < (self.y_s+delta) and self.y_current > (self.y_s-delta):
-            self._result.arrived = 1
-            self.server.set_succeeded(self._result)
-
-        else:
-            self._result.arrived = 0
-            self.server.set_aborted(self._result)
+        
+        self._result.arrived = 1
+        self.server.set_succeeded(self._result)
 
 
 

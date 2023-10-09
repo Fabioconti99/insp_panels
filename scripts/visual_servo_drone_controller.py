@@ -7,6 +7,7 @@ import numpy as np
 roslib.load_manifest('insp_panels_pkg')
 import rospy
 import actionlib
+import time 
 
 from insp_panels_pkg.msg import *
 
@@ -26,7 +27,7 @@ pub_cmd_vel=rospy.Publisher("/command", Drone_cmd, queue_size=1) #maybe is bette
 
 x_line = 0
 y_line = 0 
-
+P_gain_yaw=float(0.5)
 x_im = 0
 # GLOBAL VARIABLES
 rho = float(0)
@@ -41,14 +42,19 @@ y_current = float(0)
 
 im_width = float (10000)
 
+theta_s = 0
+
+angle = 0
+
 def get_rotation(data1):
     global y_current
     y_current  = data1.position.y
 
 def callback_loc(pose):
     global x_line,y_line
-    global theta,rho,rail_detected
-    global x_im,im_width
+    global theta,rho,rail_detected,theta_s
+    global x_im,im_width,angle
+    angle=pose.orientation.z
     im_width=pose.orientation.x
     x_im = pose.position.x
     if(math.radians(pose.orientation.z)==0):
@@ -67,21 +73,24 @@ def callback_loc(pose):
 
         else :
             theta = math.radians(90-abs(pose.orientation.z))
-
+            
     elif pose.orientation.z < 0:
 
         if x_line >= 0:
             theta = math.radians(90-abs(pose.orientation.z))
+            theta_s =float(math.radians(90))
 
         else:
             theta = math.pi-math.radians(90-abs(pose.orientation.z))
+            theta_s =float(math.radians(90))
     else:
 
         if y_line > 0:
             theta = math.radians(90)
-
+            theta_s =float(math.radians(90))
         else:
             theta = -math.radians(90)
+            theta_s =-float(math.radians(90))
 
     if y_line < 0:    
         rho = -math.sqrt((x_line*x_line)+(y_line*y_line))
@@ -99,16 +108,15 @@ def callback_ground(distance):
 def main():
 
     global rho,theta
-    global y_line
+    global y_line,theta_s,P_gain_yaw,angle
 
-    lam = np.array([[0.1,0,0,0],[0,1,0,0],[0,0,0.01,0],[0,0,0,0.005]])
+    lam = np.array([[0.1,0,0,0],[0,1,0,0],[0,0,0.01,0],[0,0,0,0.5]])
     #lam = np.array([[1,0,0,0],[0,1,0,0],[0,0,0.01,0],[0,0,0,0.005]])
 
     y_prec = float(0)
 
     v_y_s = float(0.2)
     rho_s = float(0)
-    theta_s =float(math.radians(90))
     z_s=float(7) # meters
 
 
@@ -142,17 +150,28 @@ def main():
     l_rho = float((A*rho*math.cos(theta)+B*rho*math.sin(theta)+C)/D)
     l_theta = float((A*math.sin(theta)-B*math.cos(theta))/D)
 
+    time_flag = 0
     while not rospy.is_shutdown():
 
+        if time_flag == 0:
+            exit_time = time.time()+1
         if x_im >= (im_width/4):
-            cmd.yaw = 0
-            cmd.pitch = 0
-            cmd.roll = 0
-            cmd.throttle = 0
+            time_flag=1
 
-            print("OUT OUT OUT OUT OUT OUT ")
-            pub_cmd_vel.publish(cmd)
-            break
+            if time.time()<exit_time:
+                pub_cmd_vel.publish(cmd)
+                print("here")
+            else:
+                cmd.yaw = 0
+                cmd.pitch = 0
+                cmd.roll = 0
+                cmd.throttle = 0
+
+                print("OUT OUT OUT OUT OUT OUT ")
+                pub_cmd_vel.publish(cmd)
+                break
+        else:
+            time_flag=0
 
         v_y = (y_current-y_prec)/(1/20)
         y_prec = y_current
@@ -181,15 +200,16 @@ def main():
 
 
         cmd.pitch = U[1,0]
-        cmd.throttle = U[2,0]
-        cmd.yaw = U[3,0]     # movimento sullo yaw
+        cmd.throttle = 0.5*(7 - z)
+        #cmd.throttle = U[2,0]
+        cmd.yaw = (+P_gain_yaw*angle)     # movimento sullo yaw
 
         
         if(abs(cmd.throttle)>4): # MAX throttle DJI= 4m/s
             cmd.throttle=4*(abs(cmd.throttle)/cmd.throttle)
 
         if(abs(cmd.yaw)>30): # MAX yaw DJI= 100 degree/s 
-            cmd.yaw=30*(abs(cmd.yaw)/cmd.yaw)
+            cmd.yaw=-30*(abs(cmd.yaw)/cmd.yaw)
         
         if(abs(cmd.roll)>5): # MAX roll/pitch DJI= 15m/s 
             cmd.roll=5*(abs(cmd.roll)/cmd.roll)
@@ -219,7 +239,8 @@ def main():
         print("Data    :")
         print("y_line  :",y_line)
         print("z       :",z)
-        print("theta   :",theta)
+        print("theta   :",theta*180/math.pi)
+        print("theta_s   :",theta_s*180/math.pi)
         print("v_y     :",v_y)
 
         rate.sleep()

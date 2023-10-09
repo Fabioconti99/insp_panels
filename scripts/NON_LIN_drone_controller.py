@@ -4,19 +4,17 @@ import math
 import roslib
 roslib.load_manifest('insp_panels_pkg')
 import rospy
-import actionlib
 import os
 import sys
 
-import argparse
 
 import csv,time
 
 from insp_panels_pkg.msg import *
 
-from   std_msgs.msg       import Float32,Int16
+from   std_msgs.msg       import Float32
 from   geometry_msgs.msg  import Pose
-from   tf.transformations import euler_from_quaternion, quaternion_from_euler
+from   tf.transformations import euler_from_quaternion
 
 from pathlib import Path
 FILE = Path(__file__).resolve()
@@ -46,6 +44,7 @@ def get_rotation(data1):
     global x_current,y_current,yaw
     x_current  = data1.position.x
     y_current  = data1.position.y
+    z_current  = data1.position.z
 
     quat_x   = data1.orientation.x 
     quat_y   = data1.orientation.y
@@ -75,8 +74,9 @@ def main():
     global x_current,y_current,yaw
     global x,y,angle,panel_detected,ground_distance
     global im_width, im_height
-    altitude=7 # meters
-    P_gain_throttle=0.5
+    altitude=18 # meters
+    #altitude=1.8# meters
+    P_gain_throttle=0.005
 
     # pubblico comando in velocita con custom message sul topic coomand
     pub_cmd_vel=rospy.Publisher("/command", Drone_cmd, queue_size=1) #maybe is better to use cmd_vel
@@ -87,21 +87,34 @@ def main():
 
     delta = .3
 
+    time_flag = 0
     while not rospy.is_shutdown():
+
+        if time_flag == 0:
+            exit_time = time.time()+1
+        if x >= (im_width/4):
+            time_flag=1
+
+            if time.time()<exit_time:
+                pub_cmd_vel.publish(cmd)
+                print("here")
+            else:
+                cmd.yaw = 0
+                cmd.pitch = 0
+                cmd.roll = 0
+                cmd.throttle = 0
+
+                print("OUT OUT OUT OUT OUT OUT ")
+                pub_cmd_vel.publish(cmd)
+                break
+        else:
+            time_flag=0
 
         print("im_width/4:",im_width/4)
         print("x:",x)
         print("---")
 
-        if x >= (im_width/4):
-            cmd.yaw = 0
-            cmd.pitch = 0
-            cmd.roll = 0
-            cmd.throttle = 0
 
-            print("OUT OUT OUT OUT OUT OUT ")
-            pub_cmd_vel.publish(cmd)
-            break
 
         x=im_width*x/1000
         y=im_height*y/1000
@@ -125,8 +138,8 @@ def main():
         
         ## THIRD TECNIQUE super ganza
         
-        V_x=0.001*y_line
-        V_y=.2             # NOTA IMPORTANTE: Puoi scegliere qualsiasi V_y
+        V_x=0.005*y_line
+        V_y=10*((max(1-abs(y)/100,0)+max(1-abs(angle)/20,0))/10)          # NOTA IMPORTANTE: Puoi scegliere qualsiasi V_y
 
         if(panel_detected==42): # It means rails not detected, so keep the drone still
             cmd.yaw = 0
@@ -137,10 +150,12 @@ def main():
         
         else:
             if(abs(cmd.pitch)>5): # MAX roll/pitch DJI= 15m/s 
-                cmd.pitch=5*(abs(cmd.pitch)/cmd.pitch)
+                #cmd.pitch=5*(abs(cmd.pitch)/cmd.pitch)
+                cmd.pitch=-5*(abs(cmd.pitch)/cmd.pitch)
             
             else:
-                cmd.pitch =  (V_x*math.sin(rad_angle)+V_y*math.cos(rad_angle))
+                #cmd.pitch =  (V_x*math.sin(rad_angle)+V_y*math.cos(rad_angle))
+                cmd.pitch =  -(V_x*math.sin(rad_angle)+V_y*math.cos(rad_angle))
 
 
             if(abs(cmd.roll)>5): # MAX roll/pitch DJI= 15m/s 
@@ -153,10 +168,11 @@ def main():
                     cmd.roll  = -(-V_x*math.cos(rad_angle))
             
             if(abs(cmd.yaw)>30): # MAX yaw DJI= 100 degree/s 
-                cmd.yaw=30*(abs(cmd.yaw)/cmd.yaw)
+                #cmd.yaw=30*(abs(cmd.yaw)/cmd.yaw)
+                cmd.yaw=-30*(abs(cmd.yaw)/cmd.yaw)
             else:
-                cmd.yaw= 10*(rad_angle)
-
+                #cmd.yaw= 10*(rad_angle)
+                cmd.yaw= -10*(rad_angle)
             if(abs(cmd.throttle)>4): # MAX throttle DJI= 4m/s
                 cmd.throttle=4*(abs(cmd.throttle)/cmd.throttle)
             else:
