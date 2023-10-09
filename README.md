@@ -1,5 +1,6 @@
-# insp_panels
-ros architecture for controlling a UAV flight over solar pannels 
+# DJI Computer side Bridge and Control
+(All the commits comming from the profile FedeHub are mine. I've been using a university computer where that profile is registered.)
+Link to the thesis Project: [Here]() 
+## Chapter 3: Architecture
+## Chapter 6: Control
 
-This repository is still under developements. 
-All the commits comming from the profile FedeHub are mine. I've been using a university computer where that profile is registered.
